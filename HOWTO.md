@@ -21,7 +21,7 @@ This service fetches BTC/USD prices from multiple public APIs (Kraken, Coinbase,
 The service follows a modular, interface-driven design:
 
 ```
-cmd/server/main.go        # Entrypoint
+main.go        # Entrypoint
 internal/
 ├─ aggregator/           # Aggregation logic (average/median)
 ├─ client/               # Exchange clients: Kraken, Coinbase, CryptoCompare
@@ -75,7 +75,7 @@ go mod download
 export $(cat .env | xargs)
 
 # Run server
-go run ./cmd/server
+go run .
 ```
 
 ### 2. Docker
