@@ -81,8 +81,8 @@ go run .
 ### 2. Docker
 
 ```bash
-docker build -t btc-service .
-docker run --env-file .env -p 8080:8080 btc-service
+docker build --network=host -t btc-service .
+docker run --network=host --env-file .env -p 8080:8080 btc-service
 ```
 
 > Ensure Docker DNS works correctly for external APIs (see HOWTO note below).
