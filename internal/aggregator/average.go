@@ -1,6 +1,9 @@
 package aggregator
 
-import "errors"
+import (
+	"errors"
+	"math"
+)
 
 type Aggregator interface {
 	Aggregate(prices []float64) (float64, error)
@@ -22,5 +25,8 @@ func (a *AverageAggregator) Aggregate(prices []float64) (float64, error) {
 		sum += p
 	}
 
-	return sum / float64(len(prices)), nil
+	avg := sum / float64(len(prices))
+	avg = math.Round(avg*100) / 100
+
+	return avg, nil
 }

@@ -36,6 +36,7 @@ func main() {
 	sources := []client.PriceSource{
 		client.NewCoinbase(cfg.RequestTimeout),
 		client.NewKraken(cfg.RequestTimeout),
+		client.NewCryptoCompare(cfg.RequestTimeout),
 	}
 
 	pl := poller.New(
