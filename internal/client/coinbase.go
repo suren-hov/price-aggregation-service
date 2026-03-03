@@ -7,18 +7,15 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 )
 
 type Coinbase struct {
 	httpClient *http.Client
 }
 
-func NewCoinbase(timeout time.Duration) *Coinbase {
+func NewCoinbase(httpClient *http.Client) *Coinbase {
 	return &Coinbase{
-		httpClient: &http.Client{
-			Timeout: timeout,
-		},
+		httpClient: httpClient,
 	}
 }
 
