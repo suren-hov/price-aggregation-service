@@ -33,14 +33,14 @@ func main() {
 	st := store.New()
 	agg := aggregator.NewAverage()
 
-	httpClient := http.Client{
+	httpClient := &http.Client{
 		Timeout: cfg.RequestTimeout,
 	}
 	
 	sources := []client.PriceSource{
-		client.NewCoinbase(&httpClient),
-		client.NewKraken(&httpClient),
-		client.NewCryptoCompare(&httpClient),
+		client.NewCoinbase(httpClient),
+		client.NewKraken(httpClient),
+		client.NewCryptoCompare(httpClient),
 	}
 
 	pl := poller.New(
