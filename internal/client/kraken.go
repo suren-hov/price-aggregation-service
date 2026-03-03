@@ -7,18 +7,15 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 )
 
 type Kraken struct {
 	httpClient *http.Client
 }
 
-func NewKraken(timeout time.Duration) *Kraken {
+func NewKraken(httpClient *http.Client) *Kraken {
 	return &Kraken{
-		httpClient: &http.Client{
-			Timeout: timeout,
-		},
+		httpClient: httpClient,
 	}
 }
 

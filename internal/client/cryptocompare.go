@@ -6,18 +6,15 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
 )
 
 type CryptoCompare struct {
 	httpClient *http.Client
 }
 
-func NewCryptoCompare(timeout time.Duration) *CryptoCompare {
+func NewCryptoCompare(httpClient *http.Client) *CryptoCompare {
 	return &CryptoCompare{
-		httpClient: &http.Client{
-			Timeout: timeout,
-		},
+		httpClient: httpClient,
 	}
 }
 
