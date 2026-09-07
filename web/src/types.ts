@@ -7,3 +7,7 @@ export interface Price {
 }
 
 export type HealthStatus = 'healthy' | 'unhealthy' | 'unknown'
+
+export interface BackendConfig {
+  poll_interval_seconds: number
+}

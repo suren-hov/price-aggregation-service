@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { HealthStatus, Price } from './types'
 
-const POLL_MS = 5000
-
 interface PriceFeedState {
   price: Price | null
   health: HealthStatus
@@ -10,7 +8,7 @@ interface PriceFeedState {
   lastFetchedAt: Date | null
 }
 
-export function usePriceFeed(): PriceFeedState {
+export function usePriceFeed(pollMs: number): PriceFeedState {
   const [price, setPrice] = useState<Price | null>(null)
   const [health, setHealth] = useState<HealthStatus>('unknown')
   const [error, setError] = useState<string | null>(null)
@@ -52,13 +50,13 @@ export function usePriceFeed(): PriceFeedState {
     }
 
     poll()
-    const id = setInterval(poll, POLL_MS)
+    const id = setInterval(poll, pollMs)
 
     return () => {
       controller.abort()
       clearInterval(id)
     }
-  }, [])
+  }, [pollMs])
 
   return { price, health, error, lastFetchedAt }
 }

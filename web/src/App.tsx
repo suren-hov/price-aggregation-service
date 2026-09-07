@@ -1,5 +1,6 @@
 import { usePriceFeed } from './usePriceFeed'
 import { useNow } from './useNow'
+import { useBackendConfig } from './useBackendConfig'
 
 const currencyFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -11,6 +12,10 @@ function secondsAgoLabel(lastUpdated: string, now: Date): string {
   const secondsAgo = Math.max(0, Math.round((now.getTime() - new Date(lastUpdated).getTime()) / 1000))
   if (secondsAgo < 2) return 'just now'
   return `${secondsAgo}s ago`
+}
+
+function pollIntervalLabel(seconds: number): string {
+  return Number.isInteger(seconds) ? `${seconds}s` : `${seconds.toFixed(1)}s`
 }
 
 type DisplayHealth = 'healthy' | 'unhealthy' | 'unknown' | 'starting'
@@ -39,18 +44,34 @@ function StatusBadge({ health }: { health: DisplayHealth }) {
   )
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="rounded-xl bg-slate-800/50 p-4 ring-1 ring-inset ring-slate-700/50">
       <dt className="text-sm text-slate-400">{label}</dt>
       <dd className="mt-1 text-lg font-semibold text-slate-100">{value}</dd>
+      {hint && <p className="mt-0.5 text-xs text-slate-500">{hint}</p>}
     </div>
   )
 }
 
+// Used only until /config responds - a few tens of ms in practice - so the
+// dashboard can start polling immediately instead of waiting on that request.
+const FALLBACK_POLL_MS = 5000
+
+// The client and backend poll on independent, unsynchronized clocks. Polling
+// at exactly the backend's interval means a bad phase offset can leave the
+// display up to a full interval stale; polling at half that interval bounds
+// the worst case much tighter without hammering the backend.
+function clientPollMs(backendPollIntervalSeconds: number | null): number {
+  if (backendPollIntervalSeconds === null) return FALLBACK_POLL_MS
+  return Math.max(1000, Math.round((backendPollIntervalSeconds * 1000) / 2))
+}
+
 export default function App() {
-  const { price, health, error, lastFetchedAt } = usePriceFeed()
   const now = useNow()
+  const backendConfig = useBackendConfig()
+  const pollMs = clientPollMs(backendConfig?.poll_interval_seconds ?? null)
+  const { price, health, error, lastFetchedAt } = usePriceFeed(pollMs)
 
   // The backend returns HTTP 200 with a zero-value price before its very
   // first successful poll (and while `stale`), rather than an error -
@@ -99,6 +120,11 @@ export default function App() {
           <Stat
             label="Last updated"
             value={hasPrice ? secondsAgoLabel(price.last_updated, now) : '—'}
+            hint={
+              backendConfig
+                ? `refreshes every ${pollIntervalLabel(backendConfig.poll_interval_seconds)}`
+                : undefined
+            }
           />
         </dl>
 
@@ -108,8 +134,9 @@ export default function App() {
             : 'Connecting to the price service…'}
         </p>
         <p className="mt-1 text-center text-xs text-slate-600">
-          Prices refresh from exchanges automatically in the background — refreshing
-          this page won't fetch a newer price faster than that.
+          Prices refresh from exchanges automatically in the background
+          {backendConfig ? ` every ${pollIntervalLabel(backendConfig.poll_interval_seconds)}` : ''} —
+          refreshing this page won't fetch a newer price faster than that.
         </p>
       </div>
     </div>

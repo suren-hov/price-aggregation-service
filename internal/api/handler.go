@@ -11,10 +11,11 @@ import (
 type Handler struct {
 	store          *store.Store
 	staleThreshold time.Duration
+	pollInterval   time.Duration
 }
 
-func New(store *store.Store, staleThreshold time.Duration) *Handler {
-	return &Handler{store: store, staleThreshold: staleThreshold}
+func New(store *store.Store, staleThreshold, pollInterval time.Duration) *Handler {
+	return &Handler{store: store, staleThreshold: staleThreshold, pollInterval: pollInterval}
 }
 
 func (h *Handler) Price(w http.ResponseWriter, r *http.Request) {
@@ -22,6 +23,20 @@ func (h *Handler) Price(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(price)
+}
+
+type configResponse struct {
+	PollIntervalSeconds float64 `json:"poll_interval_seconds"`
+}
+
+// Config exposes the settings a client needs to interpret the API correctly
+// (e.g. how often a new price can be expected), so the frontend doesn't have
+// to duplicate backend defaults.
+func (h *Handler) Config(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(configResponse{
+		PollIntervalSeconds: h.pollInterval.Seconds(),
+	})
 }
 
 // Health reports 503 when the last price is explicitly marked stale, has

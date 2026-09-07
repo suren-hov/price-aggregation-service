@@ -58,11 +58,12 @@ func main() {
 
 	go pl.Start(rootCtx)
 
-	handler := api.New(st, cfg.StaleThreshold)
+	handler := api.New(st, cfg.StaleThreshold, cfg.PollInterval)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/price", handler.Price)
 	mux.HandleFunc("/health", handler.Health)
+	mux.HandleFunc("/config", handler.Config)
 	mux.Handle("/metrics", promhttp.Handler())
 
 	server := &http.Server{
