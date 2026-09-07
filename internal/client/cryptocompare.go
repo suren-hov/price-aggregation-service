@@ -9,8 +9,11 @@ import (
 	"time"
 )
 
+const cryptoCompareURL = "https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=USD"
+
 type CryptoCompare struct {
 	httpClient *http.Client
+	baseURL    string
 }
 
 func NewCryptoCompare(timeout time.Duration) *CryptoCompare {
@@ -18,7 +21,15 @@ func NewCryptoCompare(timeout time.Duration) *CryptoCompare {
 		httpClient: &http.Client{
 			Timeout: timeout,
 		},
+		baseURL: cryptoCompareURL,
 	}
+}
+
+// NewCryptoCompareWithURL is like NewCryptoCompare but overrides the endpoint, for tests.
+func NewCryptoCompareWithURL(timeout time.Duration, url string) *CryptoCompare {
+	c := NewCryptoCompare(timeout)
+	c.baseURL = url
+	return c
 }
 
 func (c *CryptoCompare) Name() string {
@@ -34,7 +45,7 @@ func (c *CryptoCompare) Fetch(ctx context.Context) (float64, error) {
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodGet,
-		"https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=USD",
+		c.baseURL,
 		nil,
 	)
 	if err != nil {

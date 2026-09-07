@@ -10,8 +10,11 @@ import (
 	"time"
 )
 
+const krakenURL = "https://api.kraken.com/0/public/Ticker?pair=XBTUSD"
+
 type Kraken struct {
 	httpClient *http.Client
+	baseURL    string
 }
 
 func NewKraken(timeout time.Duration) *Kraken {
@@ -19,7 +22,15 @@ func NewKraken(timeout time.Duration) *Kraken {
 		httpClient: &http.Client{
 			Timeout: timeout,
 		},
+		baseURL: krakenURL,
 	}
+}
+
+// NewKrakenWithURL is like NewKraken but overrides the endpoint, for tests.
+func NewKrakenWithURL(timeout time.Duration, url string) *Kraken {
+	k := NewKraken(timeout)
+	k.baseURL = url
+	return k
 }
 
 func (k *Kraken) Name() string {
@@ -40,7 +51,7 @@ func (k *Kraken) Fetch(ctx context.Context) (float64, error) {
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodGet,
-		"https://api.kraken.com/0/public/Ticker?pair=XBTUSD",
+		k.baseURL,
 		nil,
 	)
 	if err != nil {

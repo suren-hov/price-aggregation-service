@@ -7,16 +7,17 @@ import (
 
 	"price-aggregation-service/internal/aggregator"
 	"price-aggregation-service/internal/client"
-	"price-aggregation-service/internal/store"
+	"price-aggregation-service/internal/metrics"
 	"price-aggregation-service/internal/model"
+	"price-aggregation-service/internal/store"
 )
 
 type Poller struct {
-	sources    []client.PriceSource
-	aggregator aggregator.Aggregator
-	store      *store.Store
-	interval   time.Duration
-	logger     *slog.Logger
+	sources     []client.PriceSource
+	aggregator  aggregator.Aggregator
+	store       *store.Store
+	interval    time.Duration
+	logger      *slog.Logger
 	RetryConfig RetryConfig
 }
 
@@ -59,7 +60,7 @@ func (p *Poller) Start(ctx context.Context) {
 		case <-ticker.C:
 			p.pollOnce(ctx)
 		}
-	}	
+	}
 }
 
 func (p *Poller) pollOnce(parentCtx context.Context) {
@@ -87,11 +88,15 @@ func (p *Poller) pollOnce(parentCtx context.Context) {
 					"latency", latency,
 					"error", err,
 				)
+				metrics.FetchFailure.WithLabelValues(s.Name()).Inc()
+				metrics.SourceStatus.WithLabelValues(s.Name()).Set(0)
 			} else {
 				p.logger.Info("fetch success",
 					"source", s.Name(),
 					"latency", latency,
 				)
+				metrics.FetchSuccess.WithLabelValues(s.Name()).Inc()
+				metrics.SourceStatus.WithLabelValues(s.Name()).Set(1)
 			}
 
 			resultsCh <- fetchResult{
@@ -128,6 +133,8 @@ func (p *Poller) pollOnce(parentCtx context.Context) {
 		p.logger.Error("aggregation failed", "error", err)
 		return
 	}
+
+	metrics.CurrentPrice.Set(aggregated)
 
 	p.store.Update(model.Price{
 		Value:       aggregated,

@@ -7,20 +7,26 @@ import (
 )
 
 type Config struct {
-	Port            string
-	PollInterval    time.Duration
-	RequestTimeout  time.Duration
-	MaxRetries      int
-	BaseRetryDelay  time.Duration
+	Port           string
+	PollInterval   time.Duration
+	RequestTimeout time.Duration
+	MaxRetries     int
+	BaseRetryDelay time.Duration
+	StaleThreshold time.Duration
 }
 
 func Load() *Config {
+	pollInterval := getDuration("POLL_INTERVAL", 10*time.Second)
+
 	return &Config{
 		Port:           getEnv("PORT", "8080"),
-		PollInterval:   getDuration("POLL_INTERVAL", 10*time.Second),
-		RequestTimeout: getDuration("REQUEST_TIMEOUT", 3*time.Second),
-		MaxRetries:     getInt("MAX_RETRIES", 2),
+		PollInterval:   pollInterval,
+		RequestTimeout: getDuration("REQUEST_TIMEOUT", 5*time.Second),
+		MaxRetries:     getInt("MAX_RETRIES", 3),
 		BaseRetryDelay: getDuration("BASE_RETRY_DELAY", 200*time.Millisecond),
+		// A price is considered stale once it's older than 3 poll cycles,
+		// which tolerates a couple of missed/slow cycles before /health flips.
+		StaleThreshold: getDuration("STALE_THRESHOLD", 3*pollInterval),
 	}
 }
 

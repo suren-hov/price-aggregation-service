@@ -10,8 +10,11 @@ import (
 	"time"
 )
 
+const coinbaseURL = "https://api.coinbase.com/v2/prices/BTC-USD/spot"
+
 type Coinbase struct {
 	httpClient *http.Client
+	baseURL    string
 }
 
 func NewCoinbase(timeout time.Duration) *Coinbase {
@@ -19,7 +22,15 @@ func NewCoinbase(timeout time.Duration) *Coinbase {
 		httpClient: &http.Client{
 			Timeout: timeout,
 		},
+		baseURL: coinbaseURL,
 	}
+}
+
+// NewCoinbaseWithURL is like NewCoinbase but overrides the endpoint, for tests.
+func NewCoinbaseWithURL(timeout time.Duration, url string) *Coinbase {
+	c := NewCoinbase(timeout)
+	c.baseURL = url
+	return c
 }
 
 func (c *Coinbase) Name() string {
@@ -28,8 +39,8 @@ func (c *Coinbase) Name() string {
 
 type coinbaseResponse struct {
 	Data struct {
-		Amount string `json:"amount"`
-		Base   string `json:"base"`
+		Amount   string `json:"amount"`
+		Base     string `json:"base"`
 		Currency string `json:"currency"`
 	} `json:"data"`
 }
@@ -39,7 +50,7 @@ func (c *Coinbase) Fetch(ctx context.Context) (float64, error) {
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodGet,
-		"https://api.coinbase.com/v2/prices/BTC-USD/spot",
+		c.baseURL,
 		nil,
 	)
 	if err != nil {

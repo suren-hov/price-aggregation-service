@@ -9,8 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	"price-aggregation-service/internal/api"
 	"price-aggregation-service/internal/aggregator"
+	"price-aggregation-service/internal/api"
 	"price-aggregation-service/internal/client"
 	"price-aggregation-service/internal/config"
 	"price-aggregation-service/internal/metrics"
@@ -54,7 +54,7 @@ func main() {
 
 	go pl.Start(rootCtx)
 
-	handler := api.New(st)
+	handler := api.New(st, cfg.StaleThreshold)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/price", handler.Price)
@@ -62,8 +62,12 @@ func main() {
 	mux.Handle("/metrics", promhttp.Handler())
 
 	server := &http.Server{
-		Addr:    ":" + cfg.Port,
-		Handler: mux,
+		Addr:              ":" + cfg.Port,
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 
 	go func() {
