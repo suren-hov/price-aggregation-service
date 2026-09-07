@@ -31,6 +31,7 @@ internal/
 ├─ model/                # Shared Price type + staleness rules
 ├─ poller/               # Polling loop, retry/backoff, metric recording
 └─ store/                # Thread-safe storage of last known price
+web/            # React + TypeScript + Tailwind dashboard (see web/README.md)
 ```
 
 * **Exchange Clients:** Each client implements a `Fetch(ctx) (float64, error)` method against its exchange's public (unauthenticated) endpoint. Endpoints are overridable per client (`NewXWithURL`) for testing.
@@ -90,6 +91,12 @@ docker run --env-file .env -p 8080:8080 btc-service
 > `--network=host` is only needed as a workaround on hosts where the default
 > Docker bridge network can't resolve external DNS (some corporate/VPN
 > setups). Try the plain commands above first.
+
+### 3. Web dashboard
+
+A React dashboard for the API lives in [`web/`](web/README.md). With the Go
+server running, `cd web && npm install && npm run dev` and open the printed
+URL — it polls `/price` and `/health` and shows the live aggregated price.
 
 ---
 
