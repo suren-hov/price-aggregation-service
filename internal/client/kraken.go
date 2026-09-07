@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 )
 
 const krakenURL = "https://api.kraken.com/0/public/Ticker?pair=XBTUSD"
@@ -17,18 +16,16 @@ type Kraken struct {
 	baseURL    string
 }
 
-func NewKraken(timeout time.Duration) *Kraken {
+func NewKraken(httpClient *http.Client) *Kraken {
 	return &Kraken{
-		httpClient: &http.Client{
-			Timeout: timeout,
-		},
-		baseURL: krakenURL,
+		httpClient: httpClient,
+		baseURL:    krakenURL,
 	}
 }
 
 // NewKrakenWithURL is like NewKraken but overrides the endpoint, for tests.
-func NewKrakenWithURL(timeout time.Duration, url string) *Kraken {
-	k := NewKraken(timeout)
+func NewKrakenWithURL(httpClient *http.Client, url string) *Kraken {
+	k := NewKraken(httpClient)
 	k.baseURL = url
 	return k
 }

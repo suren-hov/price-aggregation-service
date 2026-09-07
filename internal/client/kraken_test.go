@@ -13,7 +13,7 @@ func TestKraken_Fetch_Success(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	k := NewKrakenWithURL(time.Second, srv.URL)
+	k := NewKrakenWithURL(&http.Client{Timeout: time.Second}, srv.URL)
 	price, err := k.Fetch(t.Context())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -32,7 +32,7 @@ func TestKraken_Fetch_APIError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	k := NewKrakenWithURL(time.Second, srv.URL)
+	k := NewKrakenWithURL(&http.Client{Timeout: time.Second}, srv.URL)
 	if _, err := k.Fetch(t.Context()); err == nil {
 		t.Fatal("expected error when Kraken reports an API error")
 	}
@@ -44,7 +44,7 @@ func TestKraken_Fetch_EmptyResult(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	k := NewKrakenWithURL(time.Second, srv.URL)
+	k := NewKrakenWithURL(&http.Client{Timeout: time.Second}, srv.URL)
 	if _, err := k.Fetch(t.Context()); err == nil {
 		t.Fatal("expected error for empty result")
 	}
@@ -56,7 +56,7 @@ func TestKraken_Fetch_MissingPriceData(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	k := NewKrakenWithURL(time.Second, srv.URL)
+	k := NewKrakenWithURL(&http.Client{Timeout: time.Second}, srv.URL)
 	if _, err := k.Fetch(t.Context()); err == nil {
 		t.Fatal("expected error for missing price data")
 	}
@@ -68,7 +68,7 @@ func TestKraken_Fetch_NonOKStatus(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	k := NewKrakenWithURL(time.Second, srv.URL)
+	k := NewKrakenWithURL(&http.Client{Timeout: time.Second}, srv.URL)
 	if _, err := k.Fetch(t.Context()); err == nil {
 		t.Fatal("expected error for non-200 status")
 	}

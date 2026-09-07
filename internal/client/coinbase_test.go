@@ -13,7 +13,7 @@ func TestCoinbase_Fetch_Success(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewCoinbaseWithURL(time.Second, srv.URL)
+	c := NewCoinbaseWithURL(&http.Client{Timeout: time.Second}, srv.URL)
 	price, err := c.Fetch(t.Context())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -32,7 +32,7 @@ func TestCoinbase_Fetch_NonOKStatus(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewCoinbaseWithURL(time.Second, srv.URL)
+	c := NewCoinbaseWithURL(&http.Client{Timeout: time.Second}, srv.URL)
 	if _, err := c.Fetch(t.Context()); err == nil {
 		t.Fatal("expected error for non-200 status")
 	}
@@ -44,7 +44,7 @@ func TestCoinbase_Fetch_EmptyAmount(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewCoinbaseWithURL(time.Second, srv.URL)
+	c := NewCoinbaseWithURL(&http.Client{Timeout: time.Second}, srv.URL)
 	if _, err := c.Fetch(t.Context()); err == nil {
 		t.Fatal("expected error for empty amount")
 	}
@@ -56,7 +56,7 @@ func TestCoinbase_Fetch_MalformedJSON(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewCoinbaseWithURL(time.Second, srv.URL)
+	c := NewCoinbaseWithURL(&http.Client{Timeout: time.Second}, srv.URL)
 	if _, err := c.Fetch(t.Context()); err == nil {
 		t.Fatal("expected error for malformed JSON")
 	}
@@ -68,7 +68,7 @@ func TestCoinbase_Fetch_InvalidPriceFormat(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewCoinbaseWithURL(time.Second, srv.URL)
+	c := NewCoinbaseWithURL(&http.Client{Timeout: time.Second}, srv.URL)
 	if _, err := c.Fetch(t.Context()); err == nil {
 		t.Fatal("expected error for invalid price format")
 	}

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
 )
 
 const cryptoCompareURL = "https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=USD"
@@ -16,18 +15,16 @@ type CryptoCompare struct {
 	baseURL    string
 }
 
-func NewCryptoCompare(timeout time.Duration) *CryptoCompare {
+func NewCryptoCompare(httpClient *http.Client) *CryptoCompare {
 	return &CryptoCompare{
-		httpClient: &http.Client{
-			Timeout: timeout,
-		},
-		baseURL: cryptoCompareURL,
+		httpClient: httpClient,
+		baseURL:    cryptoCompareURL,
 	}
 }
 
 // NewCryptoCompareWithURL is like NewCryptoCompare but overrides the endpoint, for tests.
-func NewCryptoCompareWithURL(timeout time.Duration, url string) *CryptoCompare {
-	c := NewCryptoCompare(timeout)
+func NewCryptoCompareWithURL(httpClient *http.Client, url string) *CryptoCompare {
+	c := NewCryptoCompare(httpClient)
 	c.baseURL = url
 	return c
 }

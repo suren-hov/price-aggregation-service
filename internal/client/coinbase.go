@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 )
 
 const coinbaseURL = "https://api.coinbase.com/v2/prices/BTC-USD/spot"
@@ -17,18 +16,16 @@ type Coinbase struct {
 	baseURL    string
 }
 
-func NewCoinbase(timeout time.Duration) *Coinbase {
+func NewCoinbase(httpClient *http.Client) *Coinbase {
 	return &Coinbase{
-		httpClient: &http.Client{
-			Timeout: timeout,
-		},
-		baseURL: coinbaseURL,
+		httpClient: httpClient,
+		baseURL:    coinbaseURL,
 	}
 }
 
 // NewCoinbaseWithURL is like NewCoinbase but overrides the endpoint, for tests.
-func NewCoinbaseWithURL(timeout time.Duration, url string) *Coinbase {
-	c := NewCoinbase(timeout)
+func NewCoinbaseWithURL(httpClient *http.Client, url string) *Coinbase {
+	c := NewCoinbase(httpClient)
 	c.baseURL = url
 	return c
 }

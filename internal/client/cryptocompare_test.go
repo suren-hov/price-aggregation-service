@@ -13,7 +13,7 @@ func TestCryptoCompare_Fetch_Success(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewCryptoCompareWithURL(time.Second, srv.URL)
+	c := NewCryptoCompareWithURL(&http.Client{Timeout: time.Second}, srv.URL)
 	price, err := c.Fetch(t.Context())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -32,7 +32,7 @@ func TestCryptoCompare_Fetch_ZeroPriceTreatedAsInvalid(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewCryptoCompareWithURL(time.Second, srv.URL)
+	c := NewCryptoCompareWithURL(&http.Client{Timeout: time.Second}, srv.URL)
 	if _, err := c.Fetch(t.Context()); err == nil {
 		t.Fatal("expected error for zero price")
 	}
@@ -44,7 +44,7 @@ func TestCryptoCompare_Fetch_NonOKStatus(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewCryptoCompareWithURL(time.Second, srv.URL)
+	c := NewCryptoCompareWithURL(&http.Client{Timeout: time.Second}, srv.URL)
 	if _, err := c.Fetch(t.Context()); err == nil {
 		t.Fatal("expected error for non-200 status")
 	}
@@ -56,7 +56,7 @@ func TestCryptoCompare_Fetch_MalformedJSON(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewCryptoCompareWithURL(time.Second, srv.URL)
+	c := NewCryptoCompareWithURL(&http.Client{Timeout: time.Second}, srv.URL)
 	if _, err := c.Fetch(t.Context()); err == nil {
 		t.Fatal("expected error for malformed JSON")
 	}
