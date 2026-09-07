@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { HealthStatus, Price } from './types'
 
 const POLL_MS = 5000
@@ -15,22 +15,23 @@ export function usePriceFeed(): PriceFeedState {
   const [health, setHealth] = useState<HealthStatus>('unknown')
   const [error, setError] = useState<string | null>(null)
   const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null)
-  const inFlight = useRef(false)
 
   useEffect(() => {
-    let cancelled = false
+    // Scoped to this effect instance (not a component-level ref) so React's
+    // dev-mode StrictMode double-invoke (mount -> cleanup -> mount) can't
+    // let a stale in-flight request block the new instance's own poll.
+    const controller = new AbortController()
+    let inFlight = false
 
     async function poll() {
-      if (inFlight.current) return
-      inFlight.current = true
+      if (inFlight) return
+      inFlight = true
 
       try {
         const [priceRes, healthRes] = await Promise.all([
-          fetch('/price'),
-          fetch('/health'),
+          fetch('/price', { signal: controller.signal }),
+          fetch('/health', { signal: controller.signal }),
         ])
-
-        if (cancelled) return
 
         if (!priceRes.ok) {
           throw new Error(`/price returned ${priceRes.status}`)
@@ -42,11 +43,11 @@ export function usePriceFeed(): PriceFeedState {
         setLastFetchedAt(new Date())
         setError(null)
       } catch (err) {
-        if (cancelled) return
+        if (controller.signal.aborted) return
         setError(err instanceof Error ? err.message : 'Failed to reach the API')
         setHealth('unknown')
       } finally {
-        inFlight.current = false
+        inFlight = false
       }
     }
 
@@ -54,7 +55,7 @@ export function usePriceFeed(): PriceFeedState {
     const id = setInterval(poll, POLL_MS)
 
     return () => {
-      cancelled = true
+      controller.abort()
       clearInterval(id)
     }
   }, [])
