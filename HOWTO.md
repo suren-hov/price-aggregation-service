@@ -1,6 +1,6 @@
 # BTC Price Aggregation Service
 
-This service fetches BTC/USD prices from multiple public APIs (Kraken, Coinbase, CryptoCompare), aggregates them, and exposes an internal HTTP API and Prometheus metrics. It is designed to be resilient, observable, and production-ready.
+This service fetches BTC/USD prices from multiple public APIs (Kraken, Coinbase, Bitstamp), aggregates them, and exposes an internal HTTP API and Prometheus metrics. It is designed to be resilient, observable, and production-ready.
 
 ---
 
@@ -25,7 +25,7 @@ main.go        # Entrypoint
 internal/
 ├─ aggregator/           # Aggregation logic (average)
 ├─ api/                  # HTTP handlers for /price and /health
-├─ client/               # Exchange clients: Kraken, Coinbase, CryptoCompare
+├─ client/               # Exchange clients: Kraken, Coinbase, Bitstamp
 ├─ config/               # Environment config loader
 ├─ metrics/              # Prometheus metric definitions
 ├─ model/                # Shared Price type + staleness rules
@@ -151,7 +151,7 @@ Example logs:
 
 ```json
 {"time":"2026-02-28T21:25:38Z","level":"INFO","msg":"fetch success","source":"kraken","latency":531909661}
-{"time":"2026-02-28T21:25:38Z","level":"WARN","msg":"retrying fetch","source":"cryptocompare","attempt":2,"error":"request failed"}
+{"time":"2026-02-28T21:25:38Z","level":"WARN","msg":"retrying fetch","source":"bitstamp","attempt":2,"error":"request failed"}
 ```
 
 ---

@@ -47,7 +47,7 @@ export default function App() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">BTC Price Aggregator</h1>
             <p className="mt-1 text-sm text-slate-400">
-              Live average across Coinbase, Kraken, and CryptoCompare
+              Live average across Coinbase, Kraken, and Bitstamp
             </p>
           </div>
           <StatusBadge health={health} />

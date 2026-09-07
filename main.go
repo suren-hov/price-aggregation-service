@@ -40,7 +40,7 @@ func main() {
 	sources := []client.PriceSource{
 		client.NewCoinbase(httpClient),
 		client.NewKraken(httpClient),
-		client.NewCryptoCompare(httpClient),
+		client.NewBitstamp(httpClient),
 	}
 
 	pl := poller.New(
