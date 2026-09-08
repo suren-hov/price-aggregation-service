@@ -9,11 +9,14 @@ calls (`/price`, etc.) work with no CORS setup.
 These are the same [`../HOWTO.md`](../HOWTO.md) build steps, just wired into
 systemd + nginx instead of running in a terminal.
 
-> The systemd unit runs as `User=suren` against `/var/www/price-aggregation-service`.
-> `/var/www` is often owned by `root`/`www-data` by default - make sure `suren`
-> can actually read/execute the repo there (e.g. `sudo chown -R suren:suren
-> /var/www/price-aggregation-service` if you cloned it as a different user),
-> or the service will fail to start with a permissions error.
+> The systemd unit runs as `User=root`. That sidesteps any file-ownership
+> issues under `/var/www`, but it means a bug in the Go binary or one of its
+> dependencies runs with full root privileges rather than being contained to
+> an unprivileged account. `ProtectSystem=strict`/`ProtectHome=read-only`
+> below still meaningfully restrict what even root can write to while the
+> service runs, but if you'd rather not run this as root at all, switch
+> `User=root` back to a dedicated non-root user and make sure that user
+> owns `/var/www/price-aggregation-service`.
 
 ## 1. Build
 

@@ -5,7 +5,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=suren
+User=root
 WorkingDirectory=/var/www/price-aggregation-service
 EnvironmentFile=-/var/www/price-aggregation-service/.env
 ExecStart=/var/www/price-aggregation-service/bin/price-aggregation-service
