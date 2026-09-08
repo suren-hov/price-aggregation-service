@@ -6,9 +6,9 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=suren
-WorkingDirectory=/home/suren/Projects/Go/price-aggregation-service
-EnvironmentFile=-/home/suren/Projects/Go/price-aggregation-service/.env
-ExecStart=/home/suren/Projects/Go/price-aggregation-service/bin/price-aggregation-service
+WorkingDirectory=/var/www/price-aggregation-service
+EnvironmentFile=-/var/www/price-aggregation-service/.env
+ExecStart=/var/www/price-aggregation-service/bin/price-aggregation-service
 Restart=on-failure
 RestartSec=2
 

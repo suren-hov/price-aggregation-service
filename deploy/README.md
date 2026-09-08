@@ -9,10 +9,16 @@ calls (`/price`, etc.) work with no CORS setup.
 These are the same [`../HOWTO.md`](../HOWTO.md) build steps, just wired into
 systemd + nginx instead of running in a terminal.
 
+> The systemd unit runs as `User=suren` against `/var/www/price-aggregation-service`.
+> `/var/www` is often owned by `root`/`www-data` by default - make sure `suren`
+> can actually read/execute the repo there (e.g. `sudo chown -R suren:suren
+> /var/www/price-aggregation-service` if you cloned it as a different user),
+> or the service will fail to start with a permissions error.
+
 ## 1. Build
 
 ```bash
-cd /home/suren/Projects/Go/price-aggregation-service
+cd /var/www/price-aggregation-service
 
 # Backend
 CGO_ENABLED=0 go build -o bin/price-aggregation-service .
