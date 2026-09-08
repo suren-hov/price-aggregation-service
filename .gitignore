@@ -1,0 +1,5 @@
+# Build output
+/bin/
+
+# Local environment overrides - never commit real secrets/config
+.env

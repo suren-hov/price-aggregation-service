@@ -1,0 +1,23 @@
+[Unit]
+Description=BTC Price Aggregation Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=suren
+WorkingDirectory=/home/suren/Projects/Go/price-aggregation-service
+EnvironmentFile=-/home/suren/Projects/Go/price-aggregation-service/.env
+ExecStart=/home/suren/Projects/Go/price-aggregation-service/bin/price-aggregation-service
+Restart=on-failure
+RestartSec=2
+
+# Hardening: the service only needs to bind a port and make outbound HTTPS
+# calls to the exchanges - it doesn't need write access to the filesystem.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
