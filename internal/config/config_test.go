@@ -82,3 +82,57 @@ func TestLoad_StaleThresholdDefaultsRelativeToPollInterval(t *testing.T) {
 		t.Errorf("expected stale threshold to scale with poll interval (60s), got %s", cfg.StaleThreshold)
 	}
 }
+
+func TestLoad_MalformedDurationFallsBackToDefault(t *testing.T) {
+	clearEnv(t)
+	t.Setenv("POLL_INTERVAL", "not-a-duration")
+
+	cfg := Load()
+
+	if cfg.PollInterval != 10*time.Second {
+		t.Errorf("expected malformed POLL_INTERVAL to fall back to the 10s default, got %s", cfg.PollInterval)
+	}
+}
+
+func TestLoad_ZeroOrNegativeDurationFallsBackToDefault(t *testing.T) {
+	for _, v := range []string{"0s", "-5s"} {
+		t.Run(v, func(t *testing.T) {
+			clearEnv(t)
+			t.Setenv("REQUEST_TIMEOUT", v)
+
+			cfg := Load()
+
+			// A zero or negative duration would either disable the HTTP
+			// client's timeout entirely or panic time.NewTicker elsewhere,
+			// so both must fall back to the default rather than pass through.
+			if cfg.RequestTimeout != 5*time.Second {
+				t.Errorf("expected REQUEST_TIMEOUT=%s to fall back to the 5s default, got %s", v, cfg.RequestTimeout)
+			}
+		})
+	}
+}
+
+func TestLoad_MalformedIntFallsBackToDefault(t *testing.T) {
+	clearEnv(t)
+	t.Setenv("MAX_RETRIES", "not-a-number")
+
+	cfg := Load()
+
+	if cfg.MaxRetries != 3 {
+		t.Errorf("expected malformed MAX_RETRIES to fall back to the default 3, got %d", cfg.MaxRetries)
+	}
+}
+
+func TestLoad_NegativeIntFallsBackToDefault(t *testing.T) {
+	clearEnv(t)
+	t.Setenv("MAX_RETRIES", "-1")
+
+	cfg := Load()
+
+	// A negative MaxRetries would make the poller's retry loop
+	// (`for attempt := 0; attempt <= MaxRetries; attempt++`) never execute
+	// at all, silently skipping every fetch attempt.
+	if cfg.MaxRetries != 3 {
+		t.Errorf("expected negative MAX_RETRIES to fall back to the default 3, got %d", cfg.MaxRetries)
+	}
+}

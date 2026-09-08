@@ -35,9 +35,10 @@ web/            # React + TypeScript + Tailwind dashboard (see web/README.md)
 ```
 
 * **Exchange Clients:** Each client implements a `Fetch(ctx) (float64, error)` method against its exchange's public (unauthenticated) endpoint. Endpoints are overridable per client (`NewXWithURL`) for testing.
-* **Aggregator:** Computes the average price from whichever sources succeeded this cycle. A source failing doesn't block aggregation as long as at least one succeeds.
+* **Aggregator:** Computes the average price from whichever sources succeeded this cycle. With 3+ sources, any price deviating more than 5% from the median is treated as an outlier (a parsing bug, a stale/wrong feed) and excluded from the average; `sources_used` reflects only the sources actually used, not just the ones that responded.
+* **Circuit breaker:** A source that fails 3 poll cycles in a row is "opened" — further cycles skip fetching it entirely (no network call, no retries) for 30s, instead of repeatedly paying full retry latency against an exchange that's already known to be down or rate-limiting. After the cooldown, one fetch is let through to test recovery.
 * **Store:** Holds the last known price safely behind a mutex.
-* **HTTP API:** Exposes `/price`, `/health`, `/metrics`.
+* **HTTP API:** Exposes `/price`, `/health`, `/config`, `/metrics`.
 * **Concurrency:** Each poll cycle fans out one goroutine per exchange, with its own retry/backoff, bounded by a per-cycle context timeout.
 
 ---
@@ -106,7 +107,8 @@ URL — it polls `/price` and `/health` and shows the live aggregated price.
 | ---------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `/price`   | Current aggregated BTC price                | `{ "price": 66565.29, "currency": "USD", "sources_used": 3, "last_updated": "2026-02-28T21:25:38Z", "stale": false }` |
 | `/health`  | Service health based on price freshness     | `200 OK` if the last price is fresh; `503` if all sources just failed, nothing has been fetched yet, or the price is older than `STALE_THRESHOLD` |
-| `/metrics` | Prometheus metrics                          | `fetch_success_total`, `fetch_failure_total`, `current_price`, `source_status`                                        |
+| `/config`  | Settings a client needs to interpret the API | `{ "poll_interval_seconds": 10 }` |
+| `/metrics` | Prometheus metrics                          | `fetch_success_total`, `fetch_failure_total`, `current_price`, `source_status`, `aggregator_excluded_total`, `circuit_open` |
 
 ---
 
@@ -114,12 +116,13 @@ URL — it polls `/price` and `/health` and shows the live aggregated price.
 
 Unit tests cover:
 
-* Aggregation logic (average)
+* Aggregation logic (average, outlier exclusion with 3+ sources, no filtering with fewer)
 * Retry/backoff behavior, including context cancellation mid-retry
-* Poller behavior: all-healthy, partial failure, all-failed (stale marking), aggregator errors
+* Circuit breaker: opens after repeated failures, blocks fetches while open, half-open recovery, per-source isolation
+* Poller behavior: all-healthy, partial failure, all-failed (stale marking), aggregator errors, outlier exclusion, circuit-open skipping
 * Exchange clients against mocked HTTP responses (success, non-200, malformed JSON, invalid/zero price)
-* Config defaults and env var overrides
-* HTTP handlers (`/price`, `/health` under fresh/stale/never-updated/aged-out conditions)
+* Config defaults, env var overrides, and fallback to defaults on malformed/invalid values (a bad `POLL_INTERVAL` used to crash the process - see Future Improvements history)
+* HTTP handlers (`/price`, `/health`, `/config` under fresh/stale/never-updated/aged-out conditions)
 * Store concurrency (via `-race`)
 
 Run tests with:
@@ -128,7 +131,9 @@ Run tests with:
 go test ./... -race -cover
 ```
 
-Actual coverage (excluding `main.go`, which is just wiring): `aggregator` ~89%, `api` 100%, `client` ~88%, `config` 100%, `model` 100%, `poller` ~86%, `store` 100%.
+CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs `go build`/`vet`/`test -race` and the web app's typecheck/lint/build on every push and PR.
+
+Actual coverage (excluding `main.go`, which is just wiring): `aggregator` ~94%, `api` 100%, `client` ~88%, `config` 100%, `model` 100%, `poller` ~91%, `store` 100%.
 
 ---
 
@@ -146,6 +151,8 @@ Prometheus metrics (`/metrics`) are updated on every poll cycle:
 * `fetch_success_total{source}` / `fetch_failure_total{source}` — per-exchange counters
 * `source_status{source}` — 1 if the exchange's last fetch succeeded, 0 otherwise
 * `current_price` — the last successfully aggregated price
+* `aggregator_excluded_total{source}` — times a source's price was excluded from aggregation as an outlier
+* `circuit_open{source}` — 1 if that source's circuit breaker is currently open (being skipped)
 
 Example logs:
 
@@ -166,12 +173,14 @@ Example logs:
 
 ## Future Improvements
 
-1. **Circuit Breaker** per source for heavy failure protection.
-2. **Rate Limiting** on API calls to avoid hitting exchange limits.
-3. **Caching** to reduce unnecessary API calls.
-4. **Docker Compose** for multi-service deployments (Prometheus, Grafana).
-5. **Benchmark Tests** for aggregation and polling latency.
-6. **Median/weighted aggregator** as an alternative to the current simple average.
+1. **Docker Compose** for multi-service deployments (Prometheus, Grafana).
+2. **Benchmark Tests** for aggregation and polling latency.
+3. **Median/weighted aggregator** as an alternative to the current simple average.
+4. **Historical price endpoint** — only the current price is available; nothing is persisted across restarts.
+
+Deliberately **not** added:
+
+* **A standalone rate limiter on outbound exchange calls** — each source is only fetched once per `POLL_INTERVAL`, retries already use exponential backoff, and the circuit breaker now stops calling a source entirely after 3 consecutive failures. A token-bucket limiter on top of that would be redundant for the current access pattern; revisit if `POLL_INTERVAL` is ever driven low enough to matter.
 
 ---
 

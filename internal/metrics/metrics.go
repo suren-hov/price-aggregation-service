@@ -33,6 +33,22 @@ var (
 		},
 		[]string{"source"},
 	)
+
+	AggregatorExcluded = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "aggregator_excluded_total",
+			Help: "Total times a source's price was excluded from aggregation as an outlier",
+		},
+		[]string{"source"},
+	)
+
+	CircuitOpen = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "circuit_open",
+			Help: "Whether a source's circuit breaker is currently open (1=open,0=closed)",
+		},
+		[]string{"source"},
+	)
 )
 
 func Register() {
@@ -41,5 +57,7 @@ func Register() {
 		FetchFailure,
 		CurrentPrice,
 		SourceStatus,
+		AggregatorExcluded,
+		CircuitOpen,
 	)
 }

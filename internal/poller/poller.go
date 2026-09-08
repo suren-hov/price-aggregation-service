@@ -2,6 +2,7 @@ package poller
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 
@@ -12,12 +13,15 @@ import (
 	"price-aggregation-service/internal/store"
 )
 
+var errCircuitOpen = errors.New("circuit open: skipping fetch")
+
 type Poller struct {
 	sources     []client.PriceSource
 	aggregator  aggregator.Aggregator
 	store       *store.Store
 	interval    time.Duration
 	logger      *slog.Logger
+	circuits    *circuitBreaker
 	RetryConfig RetryConfig
 }
 
@@ -27,9 +31,10 @@ type RetryConfig struct {
 }
 
 type fetchResult struct {
-	source string
-	price  float64
-	err    error
+	source  string
+	price   float64
+	err     error
+	skipped bool
 }
 
 func New(
@@ -45,6 +50,7 @@ func New(
 		store:      st,
 		interval:   interval,
 		logger:     logger,
+		circuits:   newCircuitBreaker(),
 	}
 }
 
@@ -71,6 +77,16 @@ func (p *Poller) pollOnce(parentCtx context.Context) {
 	resultsCh := make(chan fetchResult, len(p.sources))
 
 	for _, src := range p.sources {
+		name := src.Name()
+
+		if !p.circuits.Allow(name) {
+			p.logger.Warn("skipping fetch: circuit open", "source", name)
+			metrics.CircuitOpen.WithLabelValues(name).Set(1)
+			metrics.SourceStatus.WithLabelValues(name).Set(0)
+			resultsCh <- fetchResult{source: name, err: errCircuitOpen, skipped: true}
+			continue
+		}
+
 		go func(s client.PriceSource) {
 			start := time.Now()
 
@@ -107,39 +123,56 @@ func (p *Poller) pollOnce(parentCtx context.Context) {
 		}(src)
 	}
 
-	var validPrices []float64
-	healthySources := 0
+	var validPrices []aggregator.PricePoint
 
 	for i := 0; i < len(p.sources); i++ {
 		res := <-resultsCh
 
+		if !res.skipped {
+			if opened := p.circuits.RecordResult(res.source, res.err == nil); opened {
+				p.logger.Warn("circuit opened after repeated failures", "source", res.source)
+				metrics.CircuitOpen.WithLabelValues(res.source).Set(1)
+			} else {
+				metrics.CircuitOpen.WithLabelValues(res.source).Set(0)
+			}
+		}
+
 		if res.err == nil {
-			validPrices = append(validPrices, res.price)
-			healthySources++
+			validPrices = append(validPrices, aggregator.PricePoint{Source: res.source, Price: res.price})
 		}
 	}
 
 	current := p.store.Get()
 
-	if healthySources == 0 {
+	if len(validPrices) == 0 {
 		// All failed → mark stale
 		current.Stale = true
 		p.store.Update(current)
 		return
 	}
 
-	aggregated, err := p.aggregator.Aggregate(validPrices)
+	result, err := p.aggregator.Aggregate(validPrices)
 	if err != nil {
 		p.logger.Error("aggregation failed", "error", err)
 		return
 	}
 
-	metrics.CurrentPrice.Set(aggregated)
+	if len(result.ExcludedSources) > 0 {
+		p.logger.Warn("aggregator excluded outlier sources",
+			"excluded", result.ExcludedSources,
+			"used", result.UsedSources,
+		)
+		for _, name := range result.ExcludedSources {
+			metrics.AggregatorExcluded.WithLabelValues(name).Inc()
+		}
+	}
+
+	metrics.CurrentPrice.Set(result.Value)
 
 	p.store.Update(model.Price{
-		Value:       aggregated,
+		Value:       result.Value,
 		Currency:    "USD",
-		SourcesUsed: healthySources,
+		SourcesUsed: len(result.UsedSources),
 		LastUpdated: time.Now().UTC(),
 		Stale:       false,
 	})
